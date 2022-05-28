@@ -3,6 +3,7 @@ defmodule PseudoGettext.Common do
   Common functions for modules that implement pseudolocalization of text
   in several markup formats.
   From [Wikipedia](https://en.wikipedia.org/wiki/Pseudolocalization):
+
   > Pseudolocalization (or pseudo-localization) is a software testing method
   > used for testing internationalization aspects of software.
   > Instead of translating the text of the software into a foreign language,
@@ -28,23 +29,28 @@ defmodule PseudoGettext.Common do
   #
   # We prefer "word~." instead of "word.~" (that's why we won't split blindly on whitespace)
 
-  non_word_characters = String.to_charlist(".!?,;:«»\"`()[]{}")
+  non_word_characters = String.to_charlist("_.!?,;:«»\"`()[]{} \n\f\r")
   word_characters = Enum.map(non_word_characters, fn c -> {:not, c} end)
 
-  left = utf8_string(non_word_characters, min: 0)
-  right = utf8_string(non_word_characters, min: 0)
-  middle = utf8_string(word_characters, min: 0)
+  maybe_empty_non_word_char_sequence = utf8_string(non_word_characters, min: 0)
+  # right = utf8_string(non_word_characters, min: 0)
+  word_char_sequence = utf8_string(word_characters, min: 1)
+
+  head =
+    unwrap_and_tag(maybe_empty_non_word_char_sequence, :non_word)
+    |> tag(:chunk)
 
   word =
-    unwrap_and_tag(left, :left)
-    |> unwrap_and_tag(middle, :middle)
-    |> unwrap_and_tag(right, :right)
+    unwrap_and_tag(word_char_sequence, :word)
+    |> unwrap_and_tag(maybe_empty_non_word_char_sequence, :non_word)
+    |> tag(:chunk)
 
-  defparsecp(:single_word, word)
+  defparsecp(:chunk_parsec, head |> repeat(word))
 
-  defp split_single_word(word) do
-    {:ok, parts, _, _, _, _} = single_word(word)
-    parts
+
+  defp split_into_chunks(text) do
+    {:ok, words, "", _, _, _} = chunk_parsec(text)
+    words
   end
 
   @doc """
@@ -53,33 +59,47 @@ defmodule PseudoGettext.Common do
   ## Examples:
       iex> alias PseudoGettext.Common
       PseudoGettext.Common
+
       iex> Common.pseudolocalize_word("text") |> to_string()
       "ťêẋť~"
+
       iex> Common.pseudolocalize_word("text!") |> to_string()
       "ťêẋť~!"
+
       iex> Common.pseudolocalize_word("(text!)") |> to_string()
       "(ťêẋť~!)"
+
+      iex> Common.pseudolocalize_word("") |> to_string()
+      ""
   """
-  def pseudolocalize_word(""), do: ""
+  def pseudolocalize_chunk({:chunk, parts}) do
+    word = Keyword.get(parts, :word, nil)
+    non_word = Keyword.get(parts, :non_word, "")
 
-  def pseudolocalize_word(word) do
-    [left: left, middle: middle, right: right] = split_single_word(word)
-    # We will work only with the middle, because that's the part that contains
-    # the latin characters we want to "pseudolocalize".
-    # Also, we want word expansion to apply only to the latin characters and
-    # not to punctuation characters.
-    # This is mostly an esthetic choice, because it's prettier and more obvious
-    # when you have something like "word~~." then "word.~~".
-    length = String.length(middle)
-    nr_of_extra_characters = floor(length * @language_expansion)
-    extra_characters = String.duplicate(@padding_characters, nr_of_extra_characters)
+    localized_word =
+      case word do
+        nil ->
+          ""
 
-    new_graphemes =
-      for grapheme <- String.graphemes(middle) do
-        Common.convert_grapheme(grapheme)
+        text ->
+          length = String.length(text)
+          nr_of_extra_characters = floor(length * @language_expansion)
+          extra_characters = String.duplicate(@padding_characters, nr_of_extra_characters)
+
+          new_graphemes =
+            for grapheme <- String.graphemes(text) do
+              Common.convert_grapheme(grapheme)
+            end
+
+          [new_graphemes, extra_characters]
       end
 
-    [left, new_graphemes, extra_characters, right]
+    [localized_word, non_word]
+  end
+
+  def pseudolocalize_text(text) do
+    original_words = split_into_chunks(text)
+    Enum.map(original_words, &pseudolocalize_chunk/1)
   end
 
   @doc """

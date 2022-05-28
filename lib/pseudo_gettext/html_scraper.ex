@@ -97,6 +97,7 @@ defmodule PseudoGettext.HtmlScraper do
     end
   end
 
+
   def assert_pseudolocalized_html!(html_text, opts \\ []) do
     invalid = validate_pseudolocalized_html(html_text, opts)
 

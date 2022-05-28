@@ -8,7 +8,14 @@ defmodule PseudoGettext.MixProject do
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      elixirc_paths: elixirc_paths(Mix.env())
+      elixirc_paths: elixirc_paths(Mix.env()),
+      name: "My App",
+      # source_url: "https://github.com/USER/PROJECT",
+      # homepage_url: "http://YOUR_PROJECT_HOMEPAGE",
+      docs: [
+        main: "readme", # The main page in the docs
+        extras: ["README.md"]
+      ]
     ]
   end
 
@@ -28,7 +35,8 @@ defmodule PseudoGettext.MixProject do
       {:gettext, "> 0.0.0"},
       {:nimble_parsec, "~> 1.0"},
       {:jason, "> 0.0.0"},
-      {:floki, "~> 0.3"}
+      {:floki, "~> 0.3"},
+      {:ex_doc, "~> 0.23", only: :dev}
     ]
   end
 end

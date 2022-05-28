@@ -31,25 +31,12 @@ defmodule PseudoGettext.HtmlPseudolocalization do
   hex_encoding = times(ascii_char([?0..?9, ?a..?f, ?A..?F]), min: 1)
   decimal_encoding = times(ascii_char([?0..?9]), min: 1)
 
-  # To be as correct as possible, we will parse the list of allowed HTML entities
-  # from the JSON file in the original spec.
   entity_names =
-    "lib/pseudo_gettext/data/html_entities.json"
+    "lib/pseudo_gettext/data/html_entities.txt"
     |> File.read!()
-    |> Jason.decode!()
-    |> Map.keys()
+    |> String.split("\n")
 
-  html_entity_named =
-    entity_names
-    # Reverse the list becuase some entity names are prefixes of other entiry names.
-    # The most obvious case is entity names such as `&amp`, which might or migh not
-    # end in a semicolon.
-    # By ordering all entity names in a decreasing lexicographic ordering,
-    # we make sure that (for example) `&amp` will be matched after `&amp;`
-    |> Enum.reverse()
-    # Wrap the names in the string combinator
-    |> Enum.map(&string/1)
-    |> choice()
+  html_entity_named = choice(Enum.map(entity_names, &string/1))
 
   # Encapsulate the above combinator in a function to reduce compilation time
   # at the cost of being a little slower at runtime
