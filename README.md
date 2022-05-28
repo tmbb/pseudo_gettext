@@ -169,7 +169,7 @@ you must wrapp it in `(d)gettext`:
 
 If you reload the page, the app's branding will be properly internationalized:
 
-![User registration form fully localized](assets/pseudo-gettext-registration-form-partially-localized.png)
+![User registration form fully localized](assets/pseudo-gettext-registration-form-fully-localized.png)
 
 By setting the global locale to `nil` (i.e. `PseudoGettext.set_global_locale(nil)`)
 you can deactivate pseudolocalization and revert to the default locale:
